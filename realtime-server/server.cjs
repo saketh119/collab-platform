@@ -1,3 +1,4 @@
+// /realtime-server/server.cjs
 const http = require("http");
 const { WebSocketServer } = require("ws");
 const url = require("url");
@@ -25,18 +26,28 @@ wss.on("connection", (ws, req) => {
   const room = getRoom(roomId);
   room.clients.add(ws);
 
-  // Send current doc
+  // Send current doc (for init)
   ws.send(JSON.stringify({ type: "init", text: room.text }));
 
   ws.on("message", (raw) => {
     let msg;
-    try { msg = JSON.parse(raw); } catch { return; }
+    try {
+      msg = JSON.parse(raw);
+    } catch {
+      return;
+    }
 
     if (msg.type === "update") {
       room.text = msg.text;
       for (const c of room.clients) {
         if (c !== ws && c.readyState === 1) {
-          c.send(JSON.stringify({ type: "remote-update", text: room.text, from: clientId }));
+          c.send(
+            JSON.stringify({
+              type: "remote-update",
+              text: room.text,
+              from: clientId,
+            })
+          );
         }
       }
     }
@@ -61,4 +72,6 @@ wss.on("connection", (ws, req) => {
 });
 
 const PORT = 1234;
-server.listen(PORT, () => console.log("✅ WS Server running on ws://localhost:" + PORT));
+server.listen(PORT, () =>
+  console.log("✅ WS Server running on ws://localhost:" + PORT)
+);
